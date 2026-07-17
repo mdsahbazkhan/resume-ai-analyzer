@@ -5,6 +5,7 @@ const {
   extractExperience,
   calculateExperienceMatch,
 } = require("../services/experienceService.js");
+const { generateVerdict, normalizeVerdict } = require("../services/verdictService.js");
 
 // Weighting for the overall score: skills matter more than tenure for a technical hire,
 // but experience level still meaningfully affects fit.
@@ -49,6 +50,19 @@ const analyzeResume = async (req, res) => {
       matchPercentage * SKILL_WEIGHT + experienceMatchPercentage * EXPERIENCE_WEIGHT
     );
 
+    // Verdict is generated from the already-computed scores, not raw text, so
+    // it can never contradict the percentages shown alongside it.
+    const verdictResult = await generateVerdict({
+      matchedSkills,
+      missingSkills,
+      matchPercentage,
+      experienceMatchPercentage,
+      overallMatchPercentage,
+    });
+
+    const verdict = normalizeVerdict(verdictResult.verdict, overallMatchPercentage);
+    const reasons = Array.isArray(verdictResult.reasons) ? verdictResult.reasons.slice(0, 3) : [];
+
     res.status(200).json({
       success: true,
       data: {
@@ -61,6 +75,8 @@ const analyzeResume = async (req, res) => {
         requiredMinYears,
         experienceMatchPercentage,
         overallMatchPercentage,
+        verdict,
+        reasons,
       },
     });
   } catch (error) {
