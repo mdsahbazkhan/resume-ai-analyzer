@@ -1,4 +1,6 @@
 const { extractTextFromPDF } = require("../services/pdfService.js");
+const { extractSkills } = require("../services/geminiService.js");
+const { compareSkills } = require("../services/compareService.js");
 
 const analyzeResume = async (req, res) => {
   try {
@@ -9,16 +11,28 @@ const analyzeResume = async (req, res) => {
       });
     }
     const resumePath = req.file.path;
-    const jobDescription = req.body.jobDescription;
+    const jdText = req.body.jobDescription;
 
     const resumeText = await extractTextFromPDF(resumePath);
-    const jdText = jobDescription;
+
+    const [resumeSkillsResult, jdSkillsResult] = await Promise.all([
+      extractSkills(resumeText),
+      extractSkills(jdText),
+    ]);
+
+    const { matchedSkills, missingSkills, matchPercentage } = compareSkills(
+      resumeSkillsResult.skills,
+      jdSkillsResult.skills
+    );
 
     res.status(200).json({
       success: true,
       data: {
-        resumeText,
-        jdText,
+        resumeSkills: resumeSkillsResult.skills,
+        jdSkills: jdSkillsResult.skills,
+        matchedSkills,
+        missingSkills,
+        matchPercentage,
       },
     });
   } catch (error) {
