@@ -14,7 +14,7 @@ function ResumeUploadForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur p-6 space-y-5 shadow-xl shadow-black/20"
+      className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur p-6 space-y-5 shadow-xl shadow-black/20"
     >
       <div>
         <label className="block text-sm font-semibold text-neutral-200 mb-2">Resume</label>

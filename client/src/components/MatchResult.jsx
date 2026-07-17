@@ -1,6 +1,7 @@
 import MatchPercentageRing from './MatchPercentageRing'
 import MetricBar from './MetricBar'
 import SkillList from './SkillList'
+import FitVerdict from './FitVerdict'
 
 const formatYears = (years) => {
   if (years < 1) {
@@ -18,7 +19,7 @@ function MatchResult({ result }) {
   }`
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur p-6 space-y-6 shadow-xl shadow-black/20 animate-fade-slide-up">
+    <section className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur p-6 space-y-6 shadow-xl shadow-black/20 animate-fade-slide-up">
       <div className="flex flex-col items-center gap-2">
         <MatchPercentageRing percentage={result.overallMatchPercentage} label="Overall Match" />
         <p className="text-sm text-neutral-400">
@@ -37,6 +38,10 @@ function MatchResult({ result }) {
           subtext={experienceSubtext}
         />
       </div>
+
+      <div className="h-px bg-neutral-800" />
+
+      <FitVerdict verdict={result.verdict} reasons={result.reasons} />
 
       <div className="h-px bg-neutral-800" />
 
