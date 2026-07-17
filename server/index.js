@@ -1,10 +1,12 @@
 const express = require("express");
 const cors = require("cors");
+const analyzeRoutes = require("./routes/analyzeRoutes.js");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 
 app.get("/", (req, res) => {
   res.json({
@@ -12,6 +14,7 @@ app.get("/", (req, res) => {
     message: "Resume AI Analyzer API Running",
   });
 });
+app.use("/api/analyze", analyzeRoutes);
 
 const PORT = 5000;
 
