@@ -1,22 +1,196 @@
+const ai = require("../config/gemini");
 
-const ai = require("../config/gemini"); 
+const normalize = (skill) =>
+  skill
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]/g, "");
 
-const matchSkillsWithAI = async (resumeSkills, jdSkills) => {
+
+const SKILL_ALIASES = {
+  reactjs: "react",
+  react: "react",
+
+  nodejs: "node.js",
+  node: "node.js",
+
+  nextjs: "next.js",
+  next: "next.js",
+
+  expressjs: "express",
+  express: "express",
+
+  js: "javascript",
+  javascript: "javascript",
+
+  reduxtoolkit: "redux",
+  redux: "redux",
+
+  tailwindcss: "tailwind",
+  tailwind: "tailwind",
+
+  restapis: "rest api",
+  restapi: "rest api",
+
+  postgresql: "postgresql",
+  postgres: "postgresql",
+
+  mongodb: "mongodb",
+  mongo: "mongodb",
+
+  chromadb: "chromadb",
+  chroma: "chromadb",
+
+  amazonwebservices: "aws",
+  aws: "aws",
+
+  googlecloud: "gcp",
+  googlecloudplatform: "gcp",
+  gcp: "gcp",
+
+  microsoftazure: "azure",
+  azure: "azure",
+
+  huggingface: "huggingface",
+  llamaindex: "llamaindex",
+  semantickernel: "semantickernel",
+};
+
+const canonicalize = (skill) => {
+  const key = normalize(skill);
+  return SKILL_ALIASES[key] || key;
+};
+
+
+const SKILL_CATEGORIES = {
+  mongodb: ["databases"],
+  postgresql: ["databases"],
+  mysql: ["databases"],
+  redis: ["databases"],
+  sqlite: ["databases"],
+  dynamodb: ["databases"],
+  chromadb: ["databases", "generativeai"],
+  pinecone: ["databases", "generativeai"],
+
+  git: ["versioncontrol"],
+  github: ["versioncontrol"],
+  gitlab: ["versioncontrol"],
+  bitbucket: ["versioncontrol"],
+
+  aws: ["cloudplatforms"],
+  azure: ["cloudplatforms"],
+  gcp: ["cloudplatforms"],
+
+  langchain: ["llmframeworks", "generativeai"],
+  llamaindex: ["llmframeworks", "generativeai"],
+  semantickernel: ["llmframeworks", "generativeai"],
+
+  huggingface: ["generativeai"],
+  groq: ["generativeai"],
+  rag: ["generativeai"],
+  embeddings: ["generativeai"],
+  promptengineering: ["generativeai"],
+  aitoolsproficiency: ["generativeai"],
+  aiagents: ["generativeai"],
+  llmapis: ["generativeai", "apis"],
+  vectordatabases: ["generativeai", "databases"],
+
+  "rest api": ["apis"],
+  graphql: ["apis"],
+  grpc: ["apis"],
+  soap: ["apis"],
+  websockets: ["apis"],
+  socketio: ["apis"],
+
+  "node.js": ["backend"],
+  express: ["backend"],
+  fastapi: ["backend"],
+  django: ["backend"],
+  flask: ["backend"],
+  springboot: ["backend"],
+  dotnet: ["backend"],
+};
+
+
+const CATEGORY_PHRASE_ALIASES = {
+  database: "databases",
+  databases: "databases",
+  versioncontrol: "versioncontrol",
+  sourcecontrol: "versioncontrol",
+  cloudplatform: "cloudplatforms",
+  cloudplatforms: "cloudplatforms",
+  cloudcomputing: "cloudplatforms",
+  llmframework: "llmframeworks",
+  llmframeworks: "llmframeworks",
+  generativeai: "generativeai",
+  genai: "generativeai",
+  artificialintelligence: "generativeai",
+  llm: "generativeai",
+  llms: "generativeai",
+  largelanguagemodels: "generativeai",
+  agenticsystems: "generativeai",
+  agenticai: "generativeai",
+  aiagentsystems: "generativeai",
+  api: "apis",
+  apis: "apis",
+  backend: "backend",
+  backendsystems: "backend",
+  backenddevelopment: "backend",
+};
+
+const getCategoriesFor = (canonicalSkill) =>
+  SKILL_CATEGORIES[canonicalSkill] || [];
+
+// Fast, reliable first pass — no API call, exact behavior for every case
+// covered by the dictionaries above.
+const deterministicMatch = (resumeSkills, jdSkills) => {
+  const resumeCanonical = resumeSkills.map(canonicalize);
+  const resumeCanonicalSet = new Set(resumeCanonical);
+  const resumeCategorySet = new Set(resumeCanonical.flatMap(getCategoriesFor));
+
+  const matched = [];
+  const unresolved = [];
+
+  jdSkills.forEach((skill) => {
+    const canonical = canonicalize(skill);
+    const category = CATEGORY_PHRASE_ALIASES[canonical];
+
+    const isDirectMatch = resumeCanonicalSet.has(canonical);
+    const isCategoryMatch = Boolean(category) && resumeCategorySet.has(category);
+
+    if (isDirectMatch || isCategoryMatch) {
+      matched.push(skill);
+    } else {
+      unresolved.push(skill);
+    }
+  });
+
+  return { matched, unresolved };
+};
+
+// Fallback for anything the dictionaries above don't recognize yet — so a JD
+// using unfamiliar wording (e.g. "Workflow Automation") still gets a sensible
+// answer instead of a hardcoded no, and compareService.js doesn't need a code
+// change every time a new JD introduces a term we haven't seen before.
+const resolveUnmatchedWithAI = async (resumeSkills, unresolvedJdSkills) => {
+  if (!unresolvedJdSkills.length) return { matchedSkills: [], missingSkills: [] };
+
   const prompt = `
-You are matching a candidate's resume skills against a job description's required skills.
+You are matching a candidate's resume skills against job requirements that a rule-based
+system could not confidently classify.
 
-Treat skills as equivalent if they refer to the same underlying technology/concept,
-even if worded differently (e.g. "AI Agents" = "Agents" = "Agentic AI",
-"React.js" = "React" = "ReactJS", "REST APIs" = "REST API" = "REST",
-"Node.js" = "Node" = "NodeJS").
+For each requirement below, decide if the candidate's resume skills satisfy it — either
+directly (the same technology under a different name) or as a broader category that one of
+the resume skills falls under (e.g. "Workflow Automation" could be satisfied by n8n, Zapier,
+or Airflow experience).
 
 Resume skills: ${JSON.stringify(resumeSkills)}
-JD required skills: ${JSON.stringify(jdSkills)}
+Requirements to check: ${JSON.stringify(unresolvedJdSkills)}
 
 Return ONLY this JSON, no markdown, no extra text:
 {
-  "matchedSkills": [...jdSkills that have an equivalent in resumeSkills...],
-  "missingSkills": [...jdSkills with no equivalent in resumeSkills...]
+  "matchedSkills": [...requirements satisfied by the resume...],
+  "missingSkills": [...requirements NOT satisfied...]
 }
 `;
 
@@ -27,29 +201,24 @@ Return ONLY this JSON, no markdown, no extra text:
       contents: prompt,
     });
   } catch (error) {
-    const isRateLimit = error?.status === 429;
-    const serviceError = new Error(
-      isRateLimit
-        ? "AI service quota exceeded. Please try again in a minute."
-        : "AI service is unavailable right now. Please try again.",
-    );
-    serviceError.status = isRateLimit ? 429 : 502;
-    throw serviceError;
+    // Deterministic pass still holds even if this fallback call fails —
+    // just treat the unresolved items as missing rather than erroring out.
+    console.error("AI fallback skill match failed:", error.message);
+    return { matchedSkills: [], missingSkills: unresolvedJdSkills };
   }
 
-  const result = response.text
-    .trim()
-    .replace(/```json|```/g, "")
-    .trim();
+  const result = response.text.trim().replace(/```json|```/g, "").trim();
 
   try {
-    return JSON.parse(result);
+    const parsed = JSON.parse(result);
+    return {
+      matchedSkills: Array.isArray(parsed.matchedSkills) ? parsed.matchedSkills : [],
+      missingSkills: Array.isArray(parsed.missingSkills)
+        ? parsed.missingSkills
+        : unresolvedJdSkills,
+    };
   } catch {
-    const parseError = new Error(
-      "AI returned an unreadable response. Please try again.",
-    );
-    parseError.status = 502;
-    throw parseError;
+    return { matchedSkills: [], missingSkills: unresolvedJdSkills };
   }
 };
 
@@ -58,14 +227,13 @@ const compareSkills = async (resumeSkills = [], jdSkills = []) => {
     return { matchedSkills: [], missingSkills: [], matchPercentage: 0 };
   }
 
-  const { matchedSkills, missingSkills } = await matchSkillsWithAI(
-    resumeSkills,
-    jdSkills,
-  );
+  const { matched, unresolved } = deterministicMatch(resumeSkills, jdSkills);
+  const aiResolved = await resolveUnmatchedWithAI(resumeSkills, unresolved);
 
-  const matchPercentage = Math.round(
-    (matchedSkills.length / jdSkills.length) * 100,
-  );
+  const matchedSkills = [...matched, ...aiResolved.matchedSkills];
+  const missingSkills = aiResolved.missingSkills;
+
+  const matchPercentage = Math.round((matchedSkills.length / jdSkills.length) * 100);
 
   return { matchedSkills, missingSkills, matchPercentage };
 };
