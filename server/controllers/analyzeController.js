@@ -1,6 +1,15 @@
 const { extractTextFromPDF } = require("../services/pdfService.js");
 const { extractSkills } = require("../services/geminiService.js");
 const { compareSkills } = require("../services/compareService.js");
+const {
+  extractExperience,
+  calculateExperienceMatch,
+} = require("../services/experienceService.js");
+
+// Weighting for the overall score: skills matter more than tenure for a technical hire,
+// but experience level still meaningfully affects fit.
+const SKILL_WEIGHT = 0.7;
+const EXPERIENCE_WEIGHT = 0.3;
 
 const analyzeResume = async (req, res) => {
   try {
@@ -13,16 +22,31 @@ const analyzeResume = async (req, res) => {
     const resumePath = req.file.path;
     const jdText = req.body.jobDescription;
 
-    const resumeText = await extractTextFromPDF(resumePath);
+    let resumeText;
+    try {
+      resumeText = await extractTextFromPDF(resumePath);
+    } catch {
+      const pdfError = new Error("Could not read the PDF. Please upload a valid PDF resume.");
+      pdfError.status = 400;
+      throw pdfError;
+    }
 
-    const [resumeSkillsResult, jdSkillsResult] = await Promise.all([
+    const [resumeSkillsResult, jdSkillsResult, experienceResult] = await Promise.all([
       extractSkills(resumeText),
       extractSkills(jdText),
+      extractExperience(resumeText, jdText),
     ]);
 
-    const { matchedSkills, missingSkills, matchPercentage } = compareSkills(
+    const { matchedSkills, missingSkills, matchPercentage } = await compareSkills(
       resumeSkillsResult.skills,
       jdSkillsResult.skills
+    );
+
+    const { candidateYears, requiredMinYears } = experienceResult;
+    const experienceMatchPercentage = calculateExperienceMatch(candidateYears, requiredMinYears);
+
+    const overallMatchPercentage = Math.round(
+      matchPercentage * SKILL_WEIGHT + experienceMatchPercentage * EXPERIENCE_WEIGHT
     );
 
     res.status(200).json({
@@ -33,12 +57,16 @@ const analyzeResume = async (req, res) => {
         matchedSkills,
         missingSkills,
         matchPercentage,
+        candidateYears,
+        requiredMinYears,
+        experienceMatchPercentage,
+        overallMatchPercentage,
       },
     });
   } catch (error) {
     console.error(error);
 
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
       message: error.message,
     });

@@ -8,7 +8,7 @@ function Header() {
           <SparklesIcon className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-base font-bold text-neutral-100 tracking-tight">Skill Gap Check</h1>
+          <h1 className="text-base font-bold text-neutral-100 tracking-tight">Resume Checker</h1>
           <p className="text-xs text-neutral-500">AI-powered resume &amp; JD matcher</p>
         </div>
       </div>

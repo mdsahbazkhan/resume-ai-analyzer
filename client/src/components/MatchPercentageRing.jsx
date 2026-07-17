@@ -4,7 +4,7 @@ const getTier = (percentage) => {
   return { text: 'text-red-400', ring: '#ef4444', label: 'Weak Match' }
 }
 
-function MatchPercentageRing({ percentage }) {
+function MatchPercentageRing({ percentage, label = 'Overall Match Percentage' }) {
   const tier = getTier(percentage)
 
   return (
@@ -21,7 +21,7 @@ function MatchPercentageRing({ percentage }) {
       </div>
       <div className="text-center">
         <p className={`text-sm font-semibold ${tier.text}`}>{tier.label}</p>
-        <p className="text-xs text-neutral-500">Overall Match Percentage</p>
+        <p className="text-xs text-neutral-500">{label}</p>
       </div>
     </div>
   )

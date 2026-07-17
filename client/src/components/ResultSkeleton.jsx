@@ -5,6 +5,14 @@ function ResultSkeleton() {
         <div className="h-32 w-32 rounded-full animate-shimmer" />
         <div className="h-3 w-24 rounded animate-shimmer" />
       </div>
+      <div className="space-y-4">
+        {[0, 1].map((row) => (
+          <div key={row} className="space-y-1.5">
+            <div className="h-3 w-24 rounded animate-shimmer" />
+            <div className="h-2 w-full rounded-full animate-shimmer" />
+          </div>
+        ))}
+      </div>
       <div className="grid sm:grid-cols-2 gap-6">
         {[0, 1].map((col) => (
           <div key={col} className="space-y-3">
