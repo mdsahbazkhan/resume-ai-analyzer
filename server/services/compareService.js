@@ -141,8 +141,7 @@ const CATEGORY_PHRASE_ALIASES = {
 const getCategoriesFor = (canonicalSkill) =>
   SKILL_CATEGORIES[canonicalSkill] || [];
 
-// Fast, reliable first pass — no API call, exact behavior for every case
-// covered by the dictionaries above.
+
 const deterministicMatch = (resumeSkills, jdSkills) => {
   const resumeCanonical = resumeSkills.map(canonicalize);
   const resumeCanonicalSet = new Set(resumeCanonical);
@@ -168,10 +167,6 @@ const deterministicMatch = (resumeSkills, jdSkills) => {
   return { matched, unresolved };
 };
 
-// Fallback for anything the dictionaries above don't recognize yet — so a JD
-// using unfamiliar wording (e.g. "Workflow Automation") still gets a sensible
-// answer instead of a hardcoded no, and compareService.js doesn't need a code
-// change every time a new JD introduces a term we haven't seen before.
 const resolveUnmatchedWithAI = async (resumeSkills, unresolvedJdSkills) => {
   if (!unresolvedJdSkills.length) return { matchedSkills: [], missingSkills: [] };
 
@@ -201,8 +196,7 @@ Return ONLY this JSON, no markdown, no extra text:
       contents: prompt,
     });
   } catch (error) {
-    // Deterministic pass still holds even if this fallback call fails —
-    // just treat the unresolved items as missing rather than erroring out.
+
     console.error("AI fallback skill match failed:", error.message);
     return { matchedSkills: [], missingSkills: unresolvedJdSkills };
   }

@@ -53,8 +53,7 @@ ${jdText}
   }
 };
 
-// No requirement (or a 0-year/"fresher" requirement) is a full match.
-// Otherwise scale linearly up to the required minimum, capped at 100.
+
 const calculateExperienceMatch = (candidateYears, requiredMinYears) => {
   if (!requiredMinYears || requiredMinYears <= 0) return 100;
   if (candidateYears >= requiredMinYears) return 100;

@@ -7,8 +7,7 @@ const {
 } = require("../services/experienceService.js");
 const { generateVerdict, normalizeVerdict } = require("../services/verdictService.js");
 
-// Weighting for the overall score: skills matter more than tenure for a technical hire,
-// but experience level still meaningfully affects fit.
+
 const SKILL_WEIGHT = 0.7;
 const EXPERIENCE_WEIGHT = 0.3;
 
@@ -50,8 +49,6 @@ const analyzeResume = async (req, res) => {
       matchPercentage * SKILL_WEIGHT + experienceMatchPercentage * EXPERIENCE_WEIGHT
     );
 
-    // Verdict is generated from the already-computed scores, not raw text, so
-    // it can never contradict the percentages shown alongside it.
     const verdictResult = await generateVerdict({
       matchedSkills,
       missingSkills,

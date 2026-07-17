@@ -63,9 +63,7 @@ Return ONLY valid JSON, no markdown, no explanation:
   }
 };
 
-// Safety net: fall back to a deterministic verdict derived from the overall
-// match score if the model returns something outside the three allowed values,
-// or picks a verdict inconsistent with the score (e.g. "Qualified" at 50%).
+
 const normalizeVerdict = (verdict, overallMatchPercentage) => {
   const scoreDerived =
     overallMatchPercentage >= 75
