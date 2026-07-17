@@ -2,6 +2,12 @@
 
 Compares a candidate's resume against a Job Description using AI. It extracts technical skills from both documents, matches them (including generic requirements like "Databases" against specific tools like MongoDB), calculates a match percentage, evaluates experience fit, and generates an AI hiring verdict (`Qualified` / `Almost There` / `Not Yet`) with three supporting reasons.
 
+## Screenshots
+
+| Upload form | Match results | Full breakdown |
+|---|---|---|
+| ![Upload form](docs/screenshots/upload-form.png) | ![Match results](docs/screenshots/match-results.png) | ![Full breakdown](docs/screenshots/full-breakdown.png) |
+
 ## Tech Stack
 
 - **Frontend:** React.js, Tailwind CSS, Axios
